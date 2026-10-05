@@ -4,6 +4,18 @@ The browser version of WhisperSub. It transcribes videos with **OpenAI Whisper r
 
 **Live:** https://whispersub-web.web.app/
 
+## Screenshots
+
+<p align="center">
+  <img src="assets/screenshot-workspace.png" width="94%" alt="WhisperSub Web workspace: video player with live captions and the subtitle cue list">
+</p>
+
+<p align="center">
+  <img src="assets/screenshot-burning.png" width="94%" alt="WhisperSub Web Raw .SRT editor while burning subtitles into the video">
+</p>
+
+## macOS app vs. web app
+
 | | macOS app | Web app |
 |---|---|---|
 | Inference | WhisperKit · CoreML on the Apple Neural Engine | Transformers.js · ONNX Runtime on **WebGPU** (WASM/CPU fallback) |
