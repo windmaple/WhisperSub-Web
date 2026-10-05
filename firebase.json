@@ -1,0 +1,25 @@
+{
+  "hosting": {
+    "site": "whispersub-web",
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(js|css|html)",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=300, must-revalidate" }
+        ]
+      },
+      {
+        "source": "**/*.@(png|svg|ico|webp)",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=86400" }
+        ]
+      }
+    ]
+  }
+}

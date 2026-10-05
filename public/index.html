@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WhisperSub Web — AI Video Subtitles in Your Browser</title>
+  <meta name="description" content="Transcribe videos with OpenAI Whisper running locally on your GPU via WebGPU, export .SRT subtitles, clip by start/end time, and burn styled captions into MP4 — nothing is uploaded." />
+  <meta name="theme-color" content="#f5f7fa" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#14161b" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" type="image/png" href="assets/icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/mediabunny@1.61.1/dist/bundles/mediabunny.min.mjs" />
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+  <!-- SVG icon sprite -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-captions" viewBox="0 0 24 24"><path fill="currentColor" d="M5 4h14a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-6.6l-4.2 3.4A.75.75 0 0 1 7 20.8V18H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Zm1.5 6.25a.75.75 0 0 0 0 1.5h3a.75.75 0 0 0 0-1.5h-3Zm5.5 0a.75.75 0 0 0 0 1.5h5.5a.75.75 0 0 0 0-1.5H12Zm-5.5 3a.75.75 0 0 0 0 1.5h6a.75.75 0 0 0 0-1.5h-6Zm8.5 0a.75.75 0 0 0 0 1.5h2.5a.75.75 0 0 0 0-1.5H15Z"/></symbol>
+      <symbol id="i-bolt" viewBox="0 0 24 24"><path fill="currentColor" d="M13.2 2.1a.75.75 0 0 1 .5.8L12.9 10H19a.75.75 0 0 1 .6 1.2l-8 10.5a.75.75 0 0 1-1.3-.6l.8-7.1H5a.75.75 0 0 1-.6-1.2l8-10.5a.75.75 0 0 1 .8-.2Z"/></symbol>
+      <symbol id="i-cpu" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/></g></symbol>
+      <symbol id="i-globe" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9s-1.3 6.3-3.8 9c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3Z"/></g></symbol>
+      <symbol id="i-film" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M7 5v14M17 5v14M3 9.5h4M3 14.5h4M17 9.5h4M17 14.5h4"/></g></symbol>
+      <symbol id="i-video" viewBox="0 0 24 24"><path fill="currentColor" d="M4 6h10a2 2 0 0 1 2 2v1.4l3.9-2.3A.75.75 0 0 1 21 7.7v8.6a.75.75 0 0 1-1.1.6L16 14.6V16a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"/></symbol>
+      <symbol id="i-scissors" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="6" cy="6.5" r="2.6"/><circle cx="6" cy="17.5" r="2.6"/><path d="M8.2 8 20 18M8.2 16 20 6"/></g></symbol>
+      <symbol id="i-to-start" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 20h14"/></g></symbol>
+      <symbol id="i-to-end" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V9M7.5 13.5 12 9l4.5 4.5M5 4h14"/></g></symbol>
+      <symbol id="i-wave" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h1M7 8v8M11 5v14M15 9v6M19 7v10M21 12h0"/></g></symbol>
+      <symbol id="i-doc-up" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5M12 18v-6M9.5 14.5 12 12l2.5 2.5"/></g></symbol>
+      <symbol id="i-flame" viewBox="0 0 24 24"><path fill="currentColor" d="M12.6 2.2a.75.75 0 0 0-1.2.3c-.7 2.2-2 3.7-3.4 5.2C6.4 9.4 4.8 11.2 4.8 14a7.2 7.2 0 0 0 14.4 0c0-2.3-1-4.3-2.2-5.8a.75.75 0 0 0-1.3.3c-.2 1-.7 1.8-1.4 2.3.2-3.3-.8-6.3-1.7-8.6Zm-.6 18.3a3 3 0 0 1-3-3c0-1.8 1.6-3 2.6-4.6.1-.2.4-.2.5 0 .9 1.5 2.9 2.7 2.9 4.6a3 3 0 0 1-3 3Z"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 20h14"/></g></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></g></symbol>
+      <symbol id="i-import" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4M12 3v12M7.5 10.5 12 15l4.5-4.5"/></g></symbol>
+      <symbol id="i-bubble" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M5 4h14a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-6.6l-4.2 3.4c-.4.3-1.2.1-1.2-.6V18H5a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z"/><path stroke-linecap="round" d="M7 9.5h10M7 13h6"/></g></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20Zm4.3 6.8a.9.9 0 0 0-1.3 0l-4.2 4.6-1.9-1.9a.9.9 0 1 0-1.3 1.3l2.6 2.6c.4.4 1 .3 1.3 0l4.8-5.3a.9.9 0 0 0 0-1.3Z"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20Zm0 8.2a.9.9 0 0 0-.9.9v5.4a.9.9 0 0 0 1.8 0v-5.4a.9.9 0 0 0-.9-.9Zm0-3.6a1.15 1.15 0 1 0 0 2.3 1.15 1.15 0 0 0 0-2.3Z"/></symbol>
+      <symbol id="i-error" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20Zm3.2 5.5a.9.9 0 0 0-1.3 0L12 9.4l-1.9-1.9a.9.9 0 1 0-1.3 1.3l1.9 1.9-1.9 1.9a.9.9 0 1 0 1.3 1.3l1.9-1.9 1.9 1.9a.9.9 0 1 0 1.3-1.3L13.3 12l1.9-1.9a.9.9 0 0 0 0-1.3Z" transform="translate(0 1)"/></symbol>
+      <symbol id="i-warn" viewBox="0 0 24 24"><path fill="currentColor" d="M10.3 3.5a2 2 0 0 1 3.4 0l8 13.9A2 2 0 0 1 20 20.4H4a2 2 0 0 1-1.7-3l8-13.9ZM12 8.6a.9.9 0 0 0-.9.9v4a.9.9 0 0 0 1.8 0v-4a.9.9 0 0 0-.9-.9Zm0 6.9a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2Z"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="10.5" width="14" height="10" rx="2.2"/><path d="M8.5 10.5V8a3.5 3.5 0 1 1 7 0v2.5"/></g></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></symbol>
+    </defs>
+  </svg>
+
+  <div class="app" id="app">
+    <!-- ================= Header ================= -->
+    <header class="topbar">
+      <div class="brand">
+        <img class="brand-icon" src="assets/icon.png" alt="" width="36" height="36" />
+        <div class="brand-text">
+          <div class="brand-row">
+            <h1 class="brand-name">WhisperSub</h1>
+            <span class="engine-badge" id="engine-badge" title="Inference backend">
+              <svg class="ico ico-xs"><use href="#i-bolt"/></svg>
+              <span id="engine-badge-text">Detecting GPU…</span>
+            </span>
+          </div>
+          <p class="brand-sub">Transcribe video, generate .SRT &amp; burn subtitles — privately, in your browser</p>
+        </div>
+      </div>
+
+      <div class="pickers">
+        <label class="picker" for="model-select">
+          <span class="picker-label"><svg class="ico ico-sm"><use href="#i-cpu"/></svg>Model</span>
+          <span class="select-wrap"><select id="model-select" aria-label="Whisper model"></select></span>
+        </label>
+        <label class="picker" for="language-select">
+          <span class="picker-label"><svg class="ico ico-sm"><use href="#i-globe"/></svg>Language</span>
+          <span class="select-wrap"><select id="language-select" aria-label="Spoken language"></select></span>
+        </label>
+      </div>
+    </header>
+
+    <!-- ================= Main split ================= -->
+    <main class="split">
+      <!-- -------- Left: video workspace -------- -->
+      <section class="workspace" aria-label="Video workspace">
+        <div class="stage" id="stage">
+          <button class="dropzone" id="dropzone" type="button">
+            <span class="dropzone-art"><svg class="ico"><use href="#i-film"/></svg></span>
+            <span class="dropzone-title">Drop a video here or click to browse</span>
+            <span class="dropzone-sub">.mp4, .mov, .m4v, .webm, .mkv — optionally drop a matching .srt alongside</span>
+            <span class="dropzone-privacy"><svg class="ico ico-xs"><use href="#i-lock"/></svg>Files never leave your device</span>
+          </button>
+
+          <div class="player" id="player" hidden>
+            <video id="video" playsinline controls preload="metadata"></video>
+            <div class="player-fallback" id="player-fallback" hidden>
+              <svg class="ico"><use href="#i-film"/></svg>
+              <strong id="fallback-name"></strong>
+              <span class="mono" id="fallback-meta"></span>
+              <span id="fallback-note">This browser can't preview this container — you can still transcribe and burn it to MP4.</span>
+            </div>
+            <div class="live-caption" id="live-caption" hidden></div>
+          </div>
+          <div class="drop-veil" id="drop-veil" hidden><span>Drop to load</span></div>
+        </div>
+
+        <div class="bar meta-bar" id="meta-bar" hidden>
+          <svg class="ico ico-sm accent"><use href="#i-video"/></svg>
+          <span class="meta-name" id="meta-name"></span>
+          <span class="meta-details" id="meta-details"></span>
+          <span class="spacer"></span>
+          <button class="btn btn-sm" id="btn-change-video" type="button">Change Video…</button>
+        </div>
+
+        <div class="bar clip-bar" id="clip-bar">
+          <span class="clip-title" id="clip-title"><svg class="ico ico-sm"><use href="#i-scissors"/></svg>Clip</span>
+          <div class="clip-field">
+            <label for="clip-start">Start</label>
+            <input id="clip-start" class="mono" type="text" inputmode="decimal" placeholder="00:00.0" autocomplete="off" spellcheck="false" />
+            <button class="btn btn-icon btn-sm" id="btn-start-playhead" type="button" title="Set Start to current playhead" aria-label="Set Start to current playhead"><svg class="ico ico-sm"><use href="#i-to-start"/></svg></button>
+          </div>
+          <div class="clip-field">
+            <label for="clip-end">End</label>
+            <input id="clip-end" class="mono" type="text" inputmode="decimal" placeholder="End" autocomplete="off" spellcheck="false" />
+            <button class="btn btn-icon btn-sm" id="btn-end-playhead" type="button" title="Set End to current playhead" aria-label="Set End to current playhead"><svg class="ico ico-sm"><use href="#i-to-end"/></svg></button>
+          </div>
+          <span class="chip" id="clip-chip" hidden></span>
+          <span class="spacer"></span>
+          <button class="btn btn-sm" id="btn-clip" type="button" title="Clip the video to Start–End now (also happens automatically before transcription)"><svg class="ico ico-sm"><use href="#i-scissors"/></svg>Clip Video</button>
+          <button class="btn btn-sm btn-ghost" id="btn-reset-clip" type="button" title="Reset to the full original video" hidden>Reset</button>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-lg btn-primary" id="btn-transcribe" type="button">
+            <svg class="ico"><use href="#i-wave"/></svg><span id="btn-transcribe-label">1. Transcribe Video</span>
+          </button>
+          <button class="btn btn-lg" id="btn-save-srt" type="button">
+            <svg class="ico"><use href="#i-doc-up"/></svg><span>2. Save .SRT</span>
+          </button>
+          <button class="btn btn-lg btn-burn" id="btn-burn" type="button">
+            <svg class="ico"><use href="#i-flame"/></svg><span>3. Burn into Video</span>
+          </button>
+        </div>
+
+        <div class="status-card" id="status-card" aria-live="polite">
+          <div class="status-row">
+            <span class="status-icon" id="status-icon"></span>
+            <span class="status-message" id="status-message">Drop a video file to begin.</span>
+            <span class="spacer"></span>
+            <div class="status-links" id="status-links"></div>
+            <button class="btn btn-sm btn-ghost" id="btn-cancel" type="button" hidden><svg class="ico ico-sm"><use href="#i-x"/></svg>Cancel</button>
+          </div>
+          <div class="progress-block" id="progress-block" hidden>
+            <div class="progress-head">
+              <span class="progress-label" id="progress-label"></span>
+              <span class="progress-value mono" id="progress-value"></span>
+            </div>
+            <div class="progress-track" id="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+          </div>
+          <div class="status-detail" id="status-detail" hidden></div>
+          <div class="status-error" id="status-error" hidden>
+            <svg class="ico ico-sm"><use href="#i-warn"/></svg><span id="status-error-text"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- -------- Right: subtitle inspector -------- -->
+      <aside class="inspector" aria-label="Subtitle inspector">
+        <div class="inspector-toolbar">
+          <div class="segmented" role="tablist" aria-label="Inspector mode">
+            <button role="tab" id="tab-cues" class="seg active" aria-selected="true" type="button">Subtitle Cues</button>
+            <button role="tab" id="tab-raw" class="seg" aria-selected="false" type="button">Raw .SRT</button>
+          </div>
+          <span class="spacer"></span>
+          <button class="btn btn-sm" id="btn-load-srt" type="button"><svg class="ico ico-sm"><use href="#i-import"/></svg>Load .SRT</button>
+          <button class="btn btn-sm" id="btn-copy-srt" type="button"><svg class="ico ico-sm"><use href="#i-copy"/></svg><span id="btn-copy-label">Copy .SRT</span></button>
+        </div>
+
+        <div class="inspector-body">
+          <div class="empty" id="empty-state">
+            <svg class="ico"><use href="#i-bubble"/></svg>
+            <strong>No Subtitles Yet</strong>
+            <p>Click <em>“1. Transcribe Video”</em> to generate .SRT subtitles on your GPU, or load an existing .SRT file.</p>
+          </div>
+          <ol class="cue-list" id="cue-list" hidden></ol>
+          <div class="raw-wrap" id="raw-wrap" hidden>
+            <textarea id="raw-srt" class="mono" spellcheck="false" aria-label="Raw SRT text"></textarea>
+            <div class="raw-hint" id="raw-hint">Edits are applied when you click away.</div>
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <input type="file" id="file-video" accept="video/*,.mkv,.webm,.m4v,.mov,.avi,.srt" multiple hidden />
+  <input type="file" id="file-srt" accept=".srt,.vtt,text/plain" hidden />
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
